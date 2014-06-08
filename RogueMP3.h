@@ -30,10 +30,22 @@
 // @Version 2.0.0
 #define ROGUEMP3_VERSION                      10000
 
-#include <avr/pgmspace.h>
-#include <stdint.h>
-#include <Stream.h>
-#include <Print.h>
+#if WIRING
+ #include <Wiring.h>
+#elif ARDUINO >= 100
+ #include <Arduino.h>
+ #define Constant(s) F(s)
+ #define __ConstantStringHelper __FlashStringHelper
+#else
+ #include <WProgram.h>
+ #define Constant(s) s
+ #define __ConstantStringHelper char
+#endif
+
+//#include <avr/pgmspace.h>
+//#include <stdint.h>
+//#include <Stream.h>
+//#include <Print.h>
 
 /*
 || Public Constants
@@ -112,18 +124,31 @@ class RogueMP3 : public Print
     int8_t begin(bool blocking = false) { return sync(blocking); }
     int8_t sync(bool blocking = false);
 
+    bool synchronized(void) { return _synchronized; }
+
     // Play Command ("PC") methods
-    int8_t playFile_P(const char *path);
-    int8_t playFile(const char *path, const char *filename = NULL, uint8_t pgmspc = 0);
+    //int8_t playFile_P(const char *path);
+    // Master method for playFile
+    // - pgmspace applies ONLY to path.
+    // - if filename is provided, it is expected to be in RAM.
+    int8_t playFile(const char *path, const char *filename = NULL, bool pgmspc = false);
+
+    int8_t playFile(const char *path, bool pgmspc);  // For diehards.
+    int8_t playFile(const String path);   // String is inherently in RAM
+    int8_t playFile(const __ConstantStringHelper *path);
+    // TODO: ConstantString (from Wiring)
+
     void setLoop(uint8_t loopcount);
     void jump(uint16_t newtime);
     void setBoost(uint8_t bass_amp, uint8_t bass_freq, int8_t treble_amp, uint8_t treble_freq);
     void setBoost(uint16_t newboost);
 
-    uint16_t getVolume(void);
+    uint16_t getVolumeLeftRight(void);
+    // This only returns the Right volume
+    uint8_t getVolume(void) { return (uint8_t)getVolumeLeftRight(); }
 
     void setVolume(uint8_t newVolume);
-    void setVolume(uint8_t new_vLeft, uint8_t new_vRight);
+    void setVolumeLeftRight(uint8_t new_vLeft, uint8_t new_vRight);
 
     void fade(uint8_t newVolume);
     void fade(uint8_t newVolume, uint16_t fadems);
@@ -139,7 +164,10 @@ class RogueMP3 : public Print
     void setSpectrumAnalyzerBands(uint16_t bands[], uint8_t count);
 
     // Information Commands ("IC" - MP3 information)
-    int16_t getTrackLength(const char *path, const char *filename = NULL, uint8_t pgmspc = 0);
+    int16_t getTrackLength(const char *path, const char *filename = NULL, bool pgmspc = false);
+    int16_t getTrackLength(const char *path, bool pgmspc);  // For diehards.
+    int16_t getTrackLength(const String path);   // String is inherently in RAM
+    int16_t getTrackLength(const __ConstantStringHelper *path);
 
     // Settings ("ST") methods
     //int8_t changesetting(char setting, const char *value);
@@ -161,8 +189,10 @@ class RogueMP3 : public Print
     // of functionality for serial classes.
     Stream *_comms;
 
+    bool _synchronized;
     uint8_t _promptChar;
     int16_t _fwVersion;
+    int8_t _fwLevel;
     moduleType _moduleType;
     
     // methods

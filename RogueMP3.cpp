@@ -26,14 +26,6 @@
 #include <stdint.h>
 #include <ctype.h>
 
-#if WIRING
- #include <Wiring.h>
-#elif ARDUINO >= 100
- #include <Arduino.h>
-#else
- #include <WProgram.h>
-#endif
-
 #include "RogueMP3.h"
 
 /*
@@ -59,7 +51,9 @@ RogueMP3::RogueMP3(Stream &comms)
 : LastErrorCode(0),
   _promptChar(DEFAULT_PROMPT),
   _fwVersion(0),
-  _moduleType(rMP3)
+  _fwLevel(0),
+  _moduleType(rMP3),
+  _synchronized(false)
 {
   _comms = &comms;
 }
@@ -79,6 +73,9 @@ int8_t RogueMP3::sync(bool blocking)
 
   // 0. empty any data in the serial buffer
   _comms->flush();
+  _synchronized = false;
+  _fwLevel = 0;
+  _fwVersion = 0;
 
   // 1. sync
   print((char)ASCII_ESC);               // send ESC to clear buffer on uMMC
@@ -90,37 +87,28 @@ int8_t RogueMP3::sync(bool blocking)
   {
     if (_readTimeout(ROGUEMP3_DEFAULT_READ_TIMEOUT) < 0)
     {
-      return -1;  // TODO: match return values (0 = bad, !0 = good?)
+      return 0;
     }
   }
 
   // 2. get version (ignore prompt - just drop it)
   _getVersion();
 
-  // 3. get prompt ("st p"), if newer firmware
-  if (_moduleType == rMP3 || (_moduleType == uMP3 && _fwVersion >= UMP3_MIN_FW_VERSION_FOR_NEW_COMMANDS))
-  {
-    // get the prompt char
-    print('S');
-    if (_moduleType != uMMC) { print('T'); };
-    print('P'); print('\r');  // get our prompt (if possible)
-    _promptChar = _getNumber(10);
-    _readBlocked();                    // consume prompt
-  }
-
-  // 4. check status
-
-  print('F'); print('C'); print('Z'); print('\r'); // Get status
-
-  if (_getResponse())
-    return -1;
-  else
-  {
-    // good
-    _readBlocked();                    // consume prompt
-
+  // RogueMP3 will only work on rMP3 or uMP3
+  if (_moduleType == uMMC)
     return 0;
-  }
+
+  _fwLevel = 1;
+  if (_moduleType == uMP3 && _fwVersion < UMP3_MIN_FW_VERSION_FOR_NEW_COMMANDS)
+    _fwLevel = 0;
+
+  // 3. get the prompt char
+  print(Constant("STP\r"));
+  _promptChar = _getNumber(10);
+  _readBlocked();                     // consume prompt
+
+  _synchronized = true;
+  return 1;
 }
 
 
@@ -131,13 +119,6 @@ int8_t RogueMP3::changeSetting(char setting, uint8_t value)
   return _getResponse();
 }
 
-
-// int8_t RogueMP3::changeSetting(char setting, const char* value)
-// {
-  // print('S'); print('T'); print(setting); print(value); print('\r');
-
-  // return _getResponse();
-// }
 
 int16_t RogueMP3::getSetting(char setting)
 {
@@ -159,25 +140,38 @@ int16_t RogueMP3::getSetting(char setting)
   return value;
 }
 
-int8_t RogueMP3::playFile_P(const char *path)
+
+int8_t RogueMP3::playFile(const char *path, bool pgmspc)
 {
-  return playFile(path, NULL, 1);
+  return playFile(path, NULL, true);
 }
 
 
-int8_t RogueMP3::playFile(const char *path, const char *filename, uint8_t pgmspc)
+int8_t RogueMP3::playFile(const String path)
 {
-  print("PCF");
+  return playFile(path.c_str(), NULL, false);
+}
+
+
+int8_t RogueMP3::playFile(const __ConstantStringHelper *path)
+{
+  return playFile(reinterpret_cast<const char PROGMEM *>(const_cast<__ConstantStringHelper *>(path)), NULL, true);
+}
+
+
+int8_t RogueMP3::playFile(const char *path, const char *filename, bool pgmspc)
+{
+  print(Constant("PCF"));
 
   if (pgmspc == 1)
     print_P(path);
   else
     print(path);
 
-  if (filename)
+  if (filename != NULL && strlen(filename) > 0)
   {
-    if (path && path[strlen(path) - 1] != '/')
-      print('/');
+    // path must be proper (no trailing slash)
+    print('/');
     print(filename);
   }
   print('\r');
@@ -186,11 +180,11 @@ int8_t RogueMP3::playFile(const char *path, const char *filename, uint8_t pgmspc
 }
 
 
-uint16_t RogueMP3::getVolume(void)
+uint16_t RogueMP3::getVolumeLeftRight(void)
 {
   uint16_t l, r;
 
-  print("PCV\r");
+  print(Constant("PCV\r"));
 
   l = _getNumber(10);
   _readBlocked();                      // consume separator
@@ -204,7 +198,7 @@ uint16_t RogueMP3::getVolume(void)
 
 void RogueMP3::setVolume(uint8_t newvolume)
 {
-  print("PCV");
+  print(Constant("PCV"));
   print(newvolume, DEC);
   print('\r');
 
@@ -212,9 +206,9 @@ void RogueMP3::setVolume(uint8_t newvolume)
 }
 
 
-void RogueMP3::setVolume(uint8_t new_vleft, uint8_t new_vright)
+void RogueMP3::setVolumeLeftRight(uint8_t new_vleft, uint8_t new_vright)
 {
-  print("PCV");
+  print(Constant("PCV"));
   print(new_vleft, DEC);
   print(' ');
   print(new_vright, DEC);
@@ -290,7 +284,7 @@ void RogueMP3::fadeLeftRight(uint8_t new_vLeft, uint8_t new_vRight, uint16_t fad
 
 void RogueMP3::playPause(void)
 {
-  print("PCP\r");
+  print(Constant("PCP\r"));
 
   _readBlocked();                      // consume prompt
 }
@@ -299,7 +293,7 @@ void RogueMP3::playPause(void)
 
 void RogueMP3::stop(void)
 {
-  print("PCS\r");
+  print(Constant("PCS\r"));
 
   _readBlocked();                      // consume prompt
 }
@@ -310,7 +304,7 @@ playbackInfo RogueMP3::getPlaybackInfo(void)
 {
   playbackInfo pi;
 
-  print("PCI\r");
+  print(Constant("PCI\r"));
   // now get the info we need
 
   // first, time
@@ -338,7 +332,7 @@ char RogueMP3::getPlaybackStatus(void)
 {
   char value;
 
-  print("PCZ\r");
+  print(Constant("PCZ\r"));
 
   value = _readBlocked();
 
@@ -350,7 +344,7 @@ char RogueMP3::getPlaybackStatus(void)
 
 void RogueMP3::jump(uint16_t newtime)
 {
-  print("PCJ");
+  print(Constant("PCJ"));
   print(newtime, DEC);
   print('\r');
 
@@ -379,7 +373,7 @@ void RogueMP3::setBoost(uint8_t bass_amp, uint8_t bass_freq, int8_t treble_amp, 
 
 void RogueMP3::setBoost(uint16_t newboost)
 {
-  print("PCB");
+  print(Constant("PCB"));
   print(newboost, DEC);
   print('\r');
 
@@ -389,7 +383,7 @@ void RogueMP3::setBoost(uint16_t newboost)
 
 void RogueMP3::setLoop(uint8_t loopcount)
 {
-  print("PCO");
+  print(Constant("PCO"));
   print(loopcount, DEC);
   print('\r');
 
@@ -414,7 +408,7 @@ uint8_t RogueMP3::getSpectrumAnalyzerValues(uint8_t values[], uint8_t peaks)
   uint8_t value = 0;
   uint8_t ch;
 
-  print("PCY");
+  print(Constant("PCY"));
   if (peaks)
     print('P');
   print('\r');
@@ -444,7 +438,7 @@ void RogueMP3::setSpectrumAnalyzerBands(uint16_t bands[], uint8_t count)
   if (count > 23)
     count = 23;
 
-  print("PCYS");
+  print(Constant("PCYS"));
 
   // now send the band frequencies
 
@@ -460,19 +454,38 @@ void RogueMP3::setSpectrumAnalyzerBands(uint16_t bands[], uint8_t count)
 }
 
 
-int16_t RogueMP3::getTrackLength(const char *path, const char *filename, uint8_t pgmspc)
+int16_t RogueMP3::getTrackLength(const char *path, bool pgmspc)
+{
+  return getTrackLength(path, NULL, true);
+}
+
+
+int16_t RogueMP3::getTrackLength(const String path)
+{
+  return getTrackLength(path.c_str(), NULL, false);
+}
+
+
+int16_t RogueMP3::getTrackLength(const __ConstantStringHelper *path)
+{
+  return getTrackLength(reinterpret_cast<const char PROGMEM *>(const_cast<__ConstantStringHelper *>(path)), NULL, true);
+}
+
+
+int16_t RogueMP3::getTrackLength(const char *path, const char *filename, bool pgmspc)
 {
   int16_t tracklength = 0;
 
-  print("ICT");
+  print(Constant("ICT"));
 
   if (pgmspc == 1)
     print_P(path);
   else
     print(path);
 
-  if (filename)
+  if (filename != NULL && strlen(filename) > 0)
   {
+    // path must be proper (no trailing slash)
     print('/');
     print(filename);
   }
@@ -561,20 +574,20 @@ int8_t RogueMP3::_getResponse(void)
   r = _readBlocked();
 
   if (r == ' ' || r == _promptChar)
-    resp = 0;
+    resp = 1;
 
   else if (r == 'E')
   {
     LastErrorCode = _getNumber(16);     // get our error code
     _readBlocked();                    // consume prompt
 
-    resp = -1;
+    resp = 0;
   }
 
   else
   {
     LastErrorCode = 0xFF;               // something got messed up, a resync would be nice
-    resp = -1;
+    resp = 0;
   }
 
   return resp;
