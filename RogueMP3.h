@@ -27,13 +27,13 @@
 #define _ROGUEMP3_H
 
 // RogueMP3 version
-// @Version 1.0.0
+// @Version 2.0.0
 #define ROGUEMP3_VERSION                      10000
 
 #include <avr/pgmspace.h>
 #include <stdint.h>
 #include <Stream.h>
-// The Stream class is derived from the Print class
+#include <Print.h>
 
 /*
 || Public Constants
@@ -87,7 +87,11 @@ struct playbackInfo {
                     };
 
 #ifndef _ROGUESD_H
-enum moduleType {uMMC = 1, uMP3, rMP3};
+enum moduleType {
+                  uMMC = 1,
+                  uMP3,
+                  rMP3
+                };
 #endif
 
 /*
@@ -99,14 +103,14 @@ class RogueMP3 : public Print
   public:
     // properties
     uint8_t LastErrorCode;
-    
+    moduleType getModuleType(void) { return _moduleType; }
+    inline int16_t version(void) { return _fwVersion; }
+
     // methods
     RogueMP3(Stream &comms);            // constructor
 
     int8_t begin(bool blocking = false) { return sync(blocking); }
     int8_t sync(bool blocking = false);
-
-    moduleType getModuleType(void) { return _moduleType; }
 
     // Play Command ("PC") methods
     int8_t playFile_P(const char *path);
@@ -143,8 +147,6 @@ class RogueMP3 : public Print
     int16_t getSetting(char setting);
     // ***************************
 
-    inline int16_t version(void) { return _fwVersion; }
-
 #if ARDUINO >= 100
     size_t write(uint8_t);
 #else
@@ -166,7 +168,6 @@ class RogueMP3 : public Print
     // methods
     int16_t _getVersion(void);
     int8_t _getResponse(void);
-    void _flush(void);
 
     int8_t _readBlocked(void);
     int16_t _readTimeout(uint16_t timeout);  // Time out = timeout * 0.01 seconds
@@ -175,8 +176,6 @@ class RogueMP3 : public Print
     uint8_t _commAvailable(void);
     int _commPeek(void);
     int _commRead(void);
-    void _commWrite(uint8_t);
-    void _commFlush(void);
 };
 
 #endif

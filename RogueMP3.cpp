@@ -78,7 +78,7 @@ int8_t RogueMP3::sync(bool blocking)
   // 4. check status
 
   // 0. empty any data in the serial buffer
-  _commFlush();
+  _comms->flush();
 
   // 1. sync
   print((char)ASCII_ESC);               // send ESC to clear buffer on uMMC
@@ -680,12 +680,3 @@ int RogueMP3::_commRead(void)
   return _comms->read();
 }
 
-void RogueMP3::_commWrite(uint8_t c)
-{
-  _comms->write(c);
-}
-
-void RogueMP3::_commFlush(void)
-{
-  _comms->flush();
-}
