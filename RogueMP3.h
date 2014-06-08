@@ -1,50 +1,45 @@
-/* $Id: RogueMP3.h 125 2010-10-18 03:04:22Z bhagman@roguerobotics.com $
+/*
+||
+|| @author         Brett Hagman <bhagman@wiring.org.co>
+|| @url            http://wiring.org.co/
+|| @url            http://roguerobotics.com/
+||
+|| @description
+|| | Rogue Robotics MP3 Module Library
+|| |
+|| | This Wiring and Arduino Library works with the following
+|| | Rogue Robotics modules:
+|| |   - uMP3 (Industrial MP3 Playback Module)
+|| |   - rMP3 (Commercial MP3 Playback Module)
+|| |
+|| | Requires:
+|| | uMP3 firmware > 111.01
+|| | rMP3 firmware > 100.00
+|| |
+|| | See http://www.roguerobotics.com/faq/update_firmware for updating firmware.
+|| #
+||
+|| @license Please see LICENSE.txt for this project.
+||
+*/
 
-  Rogue Robotics MP3 Library
-  File System interface for:
-   - uMP3
-   - rMP3
+#ifndef _ROGUEMP3_H
+#define _ROGUEMP3_H
 
-  A library to communicate with the Rogue Robotics
-  MP3 Playback modules. (uMP3, rMP3)
-  Rogue Robotics (http://www.roguerobotics.com/).
-  Requires
-  uMP3 firmware > 111.01
-
-  See http://www.roguerobotics.com/faq/update_firmware for updating firmware.
-
-  Written by Brett Hagman
-  http://www.roguerobotics.com/
-  bhagman@roguerobotics.com
-
-    This library is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-*************************************************/
-
-#ifndef _RogueMP3_h
-#define _RogueMP3_h
+// RogueMP3 version
+// @Version 1.0.0
+#define ROGUEMP3_VERSION                      10000
 
 #include <avr/pgmspace.h>
 #include <stdint.h>
 #include <Stream.h>
 // The Stream class is derived from the Print class
 
-/*************************************************
-* Public Constants
-*************************************************/
+/*
+|| Public Constants
+*/
 
-#ifndef _RogueSD_h
+#ifndef _ROGUESD_H
 
 #define DEFAULT_PROMPT                        0x3E
 
@@ -80,24 +75,24 @@
 
 #endif
 
-/*************************************************
-* Typedefs, structs, etc
-*************************************************/
+/*
+|| Typedefs, structs, etc
+*/
 
-struct playbackinfo {
+struct playbackInfo {
                       uint16_t position;
                       uint8_t samplerate;
                       uint16_t bitrate;
                       char channels;
                     };
 
-#ifndef _RogueSD_h
-enum moduletype {uMMC = 1, uMP3, rMP3};
+#ifndef _ROGUESD_H
+enum moduleType {uMMC = 1, uMP3, rMP3};
 #endif
 
-/*************************************************
-* Class
-*************************************************/
+/*
+|| Class
+*/
 
 class RogueMP3 : public Print
 {
@@ -105,56 +100,57 @@ class RogueMP3 : public Print
     // properties
     uint8_t LastErrorCode;
     
-    // constructor
-//    RogueMP3(int8_t (*_af)(void), int16_t (*_pf)(void), int16_t (*_rf)(void), void (*_wf)(uint8_t));
-    RogueMP3(Stream &comms);
-
-
     // methods
-    int8_t sync(void);
+    RogueMP3(Stream &comms);            // constructor
 
-    moduletype getmoduletype(void) { return _moduletype; }
+    int8_t begin(bool blocking = false) { return sync(blocking); }
+    int8_t sync(bool blocking = false);
+
+    moduleType getModuleType(void) { return _moduleType; }
 
     // Play Command ("PC") methods
-    int8_t playfile_P(const char *path);
-    int8_t playfile(const char *path, const char *filename = NULL, uint8_t pgmspc = 0);
-    void setloop(uint8_t loopcount);
+    int8_t playFile_P(const char *path);
+    int8_t playFile(const char *path, const char *filename = NULL, uint8_t pgmspc = 0);
+    void setLoop(uint8_t loopcount);
     void jump(uint16_t newtime);
-    void setboost(uint8_t bass_amp, uint8_t bass_freq, int8_t treble_amp, uint8_t treble_freq);
-    void setboost(uint16_t newboost);
+    void setBoost(uint8_t bass_amp, uint8_t bass_freq, int8_t treble_amp, uint8_t treble_freq);
+    void setBoost(uint16_t newboost);
 
-    uint16_t getvolume(void);
+    uint16_t getVolume(void);
 
-    void setvolume(uint8_t newvolume);
-    void setvolume(uint8_t new_vleft, uint8_t new_vright);
+    void setVolume(uint8_t newVolume);
+    void setVolume(uint8_t new_vLeft, uint8_t new_vRight);
 
-    void fade(uint8_t newvolume);
-    void fade(uint8_t newvolume, uint16_t fadems);
-    void fade_lr(uint8_t new_vleft, uint8_t new_vright);
-    void fade_lr(uint8_t new_vleft, uint8_t new_vright, uint16_t fadems);
+    void fade(uint8_t newVolume);
+    void fade(uint8_t newVolume, uint16_t fadems);
+    void fadeLeftRight(uint8_t new_vLeft, uint8_t new_vRight);
+    void fadeLeftRight(uint8_t new_vLeft, uint8_t new_vRight, uint16_t fadems);
 
-    void playpause(void);
+    void playPause(void);
     void stop(void);
     
-    playbackinfo getplaybackinfo(void);
-    char getplaybackstatus(void);
-    uint8_t getspectrumanalyzer(uint8_t values[], uint8_t peaks=0);
-    void setspectrumanalyzer(uint16_t bands[], uint8_t count);
+    playbackInfo getPlaybackInfo(void);
+    char getPlaybackStatus(void);
+    uint8_t getSpectrumAnalyzerValues(uint8_t values[], uint8_t peaks = 0);
+    void setSpectrumAnalyzerBands(uint16_t bands[], uint8_t count);
 
     // Information Commands ("IC" - MP3 information)
-    int16_t gettracklength(const char *path, const char *filename = NULL, uint8_t pgmspc = 0);
+    int16_t getTrackLength(const char *path, const char *filename = NULL, uint8_t pgmspc = 0);
 
     // Settings ("ST") methods
-    int8_t changesetting(char setting, const char *value);
-    int8_t changesetting(char setting, uint8_t value);
-    int16_t getsetting(char setting);
+    //int8_t changesetting(char setting, const char *value);
+    int8_t changeSetting(char setting, uint8_t value);
+    int16_t getSetting(char setting);
     // ***************************
 
-    inline int16_t version(void) { return _fwversion; }
+    inline int16_t version(void) { return _fwVersion; }
 
+#if ARDUINO >= 100
+    size_t write(uint8_t);
+#else
     void write(uint8_t);  // needed for Print
-
-    void print_P(const prog_char *str);
+#endif
+    void print_P(const char *str);
 
   private:
 
@@ -163,23 +159,24 @@ class RogueMP3 : public Print
     // of functionality for serial classes.
     Stream *_comms;
 
-    uint8_t _promptchar;
-    int16_t _fwversion;
-    moduletype _moduletype;
+    uint8_t _promptChar;
+    int16_t _fwVersion;
+    moduleType _moduleType;
     
     // methods
-    int16_t _get_version(void);
-    int8_t _get_response(void);
+    int16_t _getVersion(void);
+    int8_t _getResponse(void);
     void _flush(void);
 
-    int8_t _read_blocked(void);
-    int32_t _getnumber(uint8_t base);
+    int8_t _readBlocked(void);
+    int16_t _readTimeout(uint16_t timeout);  // Time out = timeout * 0.01 seconds
+    int32_t _getNumber(uint8_t base);
 
-    uint8_t _comm_available(void);
-    int _comm_peek(void);
-    int _comm_read(void);
-    void _comm_write(uint8_t);
-    void _comm_flush(void);
+    uint8_t _commAvailable(void);
+    int _commPeek(void);
+    int _commRead(void);
+    void _commWrite(uint8_t);
+    void _commFlush(void);
 };
 
 #endif
