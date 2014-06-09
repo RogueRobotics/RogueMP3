@@ -255,11 +255,11 @@ void RogueMP3::fadeLeftRight(uint8_t new_vLeft, uint8_t new_vRight, uint16_t fad
   if (fadetimestep<FADE_AUDIBLE_DIFF)
   {
     // too fast to hear - just set the volume
-    setVolume(new_vLeft, new_vRight);
+    setVolumeLeftRight(new_vLeft, new_vRight);
   }
   else
   {
-    currentvolume = getVolume();
+    currentvolume = getVolumeLeftRight();
     // for precision, we move the volume over by 4 bits
     vleft = ((currentvolume >> 8) & 0xff) * 16;
     vright = (currentvolume & 0xff) * 16;
@@ -274,7 +274,7 @@ void RogueMP3::fadeLeftRight(uint8_t new_vLeft, uint8_t new_vRight, uint16_t fad
     {
       vleft += il;
       vright += ir;
-      setVolume(vleft/16, vright/16);
+      setVolumeLeftRight(vleft/16, vright/16);
       delay(fadetimestep);
     }
   }

@@ -127,7 +127,7 @@ class RogueMP3 : public Print
     bool synchronized(void) { return _synchronized; }
 
     // Play Command ("PC") methods
-    //int8_t playFile_P(const char *path);
+
     // Master method for playFile
     // - pgmspace applies ONLY to path.
     // - if filename is provided, it is expected to be in RAM.
@@ -160,6 +160,9 @@ class RogueMP3 : public Print
     
     playbackInfo getPlaybackInfo(void);
     char getPlaybackStatus(void);
+
+    bool isPlaying(void) { return (getPlaybackStatus() == 'P'); };
+
     uint8_t getSpectrumAnalyzerValues(uint8_t values[], uint8_t peaks = 0);
     void setSpectrumAnalyzerBands(uint16_t bands[], uint8_t count);
 
@@ -189,12 +192,12 @@ class RogueMP3 : public Print
     // of functionality for serial classes.
     Stream *_comms;
 
-    bool _synchronized;
     uint8_t _promptChar;
     int16_t _fwVersion;
     int8_t _fwLevel;
     moduleType _moduleType;
-    
+    bool _synchronized;
+
     // methods
     int16_t _getVersion(void);
     int8_t _getResponse(void);
