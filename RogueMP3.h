@@ -114,7 +114,7 @@ class RogueMP3 : public Print
 {
   public:
     // properties
-    uint8_t LastErrorCode;
+    uint8_t lastErrorCode;
     moduleType getModuleType(void) { return _moduleType; }
     inline int16_t version(void) { return _fwVersion; }
 
@@ -173,7 +173,6 @@ class RogueMP3 : public Print
     int16_t getTrackLength(const __ConstantStringHelper *path);
 
     // Settings ("ST") methods
-    //int8_t changesetting(char setting, const char *value);
     int8_t changeSetting(char setting, uint8_t value);
     int16_t getSetting(char setting);
     // ***************************

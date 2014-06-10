@@ -16,6 +16,11 @@
 || | uMP3 firmware > 111.01
 || | rMP3 firmware > 100.00
 || |
+|| | Some functions require the latest beta firmware on the rMP3:
+|| | getTrackLength()
+|| | getSpectrumAnalyzerValues()
+|| | setSpectrumAnalyzerBands()
+|| |
 || | See http://www.roguerobotics.com/faq/update_firmware for updating firmware.
 || #
 ||
@@ -32,7 +37,7 @@
 || Private Constants
 */
 
-#define UMP3_MIN_FW_VERSION_FOR_NEW_COMMANDS 11101
+#define RMP3_MIN_FW_VERSION_FOR_NEW_MP3_CMDS 10002
 
 #define FADE_STEPS                      40
 #define FADE_AUDIBLE_DIFF               5
@@ -48,7 +53,7 @@
 */
 
 RogueMP3::RogueMP3(Stream &comms)
-: LastErrorCode(0),
+: lastErrorCode(0),
   _promptChar(DEFAULT_PROMPT),
   _fwVersion(0),
   _fwLevel(0),
@@ -76,6 +81,7 @@ int8_t RogueMP3::sync(bool blocking)
   _synchronized = false;
   _fwLevel = 0;
   _fwVersion = 0;
+  lastErrorCode = 0;
 
   // 1. sync
   print((char)ASCII_ESC);               // send ESC to clear buffer on uMMC
@@ -87,7 +93,7 @@ int8_t RogueMP3::sync(bool blocking)
   {
     if (_readTimeout(ROGUEMP3_DEFAULT_READ_TIMEOUT) < 0)
     {
-      return 0;
+      return -1;
     }
   }
 
@@ -98,9 +104,8 @@ int8_t RogueMP3::sync(bool blocking)
   if (_moduleType == uMMC)
     return 0;
 
-  _fwLevel = 1;
-  if (_moduleType == uMP3 && _fwVersion < UMP3_MIN_FW_VERSION_FOR_NEW_COMMANDS)
-    _fwLevel = 0;
+  if (_moduleType == rMP3 && _fwVersion >= RMP3_MIN_FW_VERSION_FOR_NEW_MP3_CMDS)
+    _fwLevel = 1;
 
   // 3. get the prompt char
   print(Constant("STP\r"));
@@ -578,7 +583,7 @@ int8_t RogueMP3::_getResponse(void)
 
   else if (r == 'E')
   {
-    LastErrorCode = _getNumber(16);     // get our error code
+    lastErrorCode = _getNumber(16);     // get our error code
     _readBlocked();                    // consume prompt
 
     resp = 0;
@@ -586,7 +591,7 @@ int8_t RogueMP3::_getResponse(void)
 
   else
   {
-    LastErrorCode = 0xFF;               // something got messed up, a resync would be nice
+    lastErrorCode = 0xFF;               // something got messed up, a resync would be nice
     resp = 0;
   }
 
@@ -603,13 +608,13 @@ int16_t RogueMP3::_getVersion(void)
 
   // get first portion mmm.nn
   _fwVersion = _getNumber(10);
-  _readBlocked();                      // consume '.'
+  _readBlocked();                       // consume '.'
   _fwVersion *= 100;
   _fwVersion += _getNumber(10);
   // ignore beta version (-bxxx), if it's there
   if (_readBlocked() == '-')
   {
-    for (char i = 0; i < 4; i++)
+    for (char i = 0; i < 5; i++)        // drop bxxx plus space
       _readBlocked();
   }
   // otherwise, it was a space
