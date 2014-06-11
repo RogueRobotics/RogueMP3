@@ -28,7 +28,7 @@
 
 // RogueMP3 version
 // @Version 2.0.0
-#define ROGUEMP3_VERSION                      10000
+#define ROGUEMP3_VERSION                      20000
 
 #if WIRING
  #include <Wiring.h>
@@ -41,11 +41,6 @@
  #define Constant(s) s
  #define __ConstantStringHelper char
 #endif
-
-//#include <avr/pgmspace.h>
-//#include <stdint.h>
-//#include <Stream.h>
-//#include <Print.h>
 
 /*
 || Public Constants
@@ -157,7 +152,7 @@ class RogueMP3 : public Print
 
     void playPause(void);
     void stop(void);
-    
+
     playbackInfo getPlaybackInfo(void);
     char getPlaybackStatus(void);
 
@@ -186,8 +181,8 @@ class RogueMP3 : public Print
 
   private:
 
-    // Polymorphism used to interact with serial class
-    // SerialBase is an abstract base class which defines a base set
+    // Polymorphism used to interact with serial class.
+    // Stream is an abstract base class which defines a base set
     // of functionality for serial classes.
     Stream *_comms;
 
@@ -211,3 +206,4 @@ class RogueMP3 : public Print
 };
 
 #endif
+

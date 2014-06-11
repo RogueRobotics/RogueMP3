@@ -73,8 +73,7 @@ int8_t RogueMP3::sync(bool blocking)
   // procedure:
   // 1. sync (send ESC, clear prompt)
   // 2. get version ("v"), and module type
-  // 3. get prompt ("st p"), if newer firmware
-  // 4. check status
+  // 3. get prompt ("st p")
 
   // 0. empty any data in the serial buffer
   _comms->flush();
@@ -110,7 +109,7 @@ int8_t RogueMP3::sync(bool blocking)
   // 3. get the prompt char
   print(Constant("STP\r"));
   _promptChar = _getNumber(10);
-  _readBlocked();                     // consume prompt
+  _readBlocked();                       // consume prompt
 
   _synchronized = true;
   return 1;
@@ -135,11 +134,11 @@ int16_t RogueMP3::getSetting(char setting)
   if (_commPeek() != 'E')
   {
     value = _getNumber(10);
-    _readBlocked();                    // consume prompt
+    _readBlocked();                     // consume prompt
   }
   else
   {
-    value = _getResponse();            // get the error
+    value = _getResponse();             // get the error
   }
 
   return value;
@@ -192,10 +191,10 @@ uint16_t RogueMP3::getVolumeLeftRight(void)
   print(Constant("PCV\r"));
 
   l = _getNumber(10);
-  _readBlocked();                      // consume separator
+  _readBlocked();                       // consume separator
   r = _getNumber(10);
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 
   return l << 8 | r;
 }
@@ -207,7 +206,7 @@ void RogueMP3::setVolume(uint8_t newvolume)
   print(newvolume, DEC);
   print('\r');
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -219,7 +218,7 @@ void RogueMP3::setVolumeLeftRight(uint8_t new_vleft, uint8_t new_vright)
   print(new_vright, DEC);
   print('\r');
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -291,7 +290,7 @@ void RogueMP3::playPause(void)
 {
   print(Constant("PCP\r"));
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -300,7 +299,7 @@ void RogueMP3::stop(void)
 {
   print(Constant("PCS\r"));
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -314,20 +313,20 @@ playbackInfo RogueMP3::getPlaybackInfo(void)
 
   // first, time
   pi.position = _getNumber(10);
-  _readBlocked();                      // consume separator
+  _readBlocked();                       // consume separator
 
   // second, samplerate
   pi.samplerate = _getNumber(10);
-  _readBlocked();                      // consume separator
+  _readBlocked();                       // consume separator
 
   // third, bitrate
   pi.bitrate = _getNumber(10);
-  _readBlocked();                      // consume separator
+  _readBlocked();                       // consume separator
 
   // fourth, channels
   pi.channels = _readBlocked();
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 
   return pi;
 }
@@ -353,7 +352,7 @@ void RogueMP3::jump(uint16_t newtime)
   print(newtime, DEC);
   print('\r');
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -382,7 +381,7 @@ void RogueMP3::setBoost(uint16_t newboost)
   print(newboost, DEC);
   print('\r');
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -392,7 +391,7 @@ void RogueMP3::setLoop(uint8_t loopcount)
   print(loopcount, DEC);
   print('\r');
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -455,7 +454,7 @@ void RogueMP3::setSpectrumAnalyzerBands(uint16_t bands[], uint8_t count)
 
   print('\r');
 
-  _readBlocked();                      // consume prompt
+  _readBlocked();                       // consume prompt
 }
 
 
@@ -501,7 +500,7 @@ int16_t RogueMP3::getTrackLength(const char *path, const char *filename, bool pg
   {
     tracklength = _getNumber(10);
 
-    _readBlocked();                 // consume prompt
+    _readBlocked();                     // consume prompt
 
     return tracklength;
   }
@@ -542,11 +541,7 @@ void RogueMP3::write(uint8_t c)
 
 int8_t RogueMP3::_readBlocked(void)
 {
-  // int8_t r;
-
   while (!_commAvailable());
-  // while((r = this->_readf()) < 0);   // this would be faster if we could guarantee that the _readf() function
-                                        // would return -1 if there was no byte read
   return _commRead();
 }
 
@@ -584,7 +579,7 @@ int8_t RogueMP3::_getResponse(void)
   else if (r == 'E')
   {
     lastErrorCode = _getNumber(16);     // get our error code
-    _readBlocked();                    // consume prompt
+    _readBlocked();                     // consume prompt
 
     resp = 0;
   }
@@ -668,15 +663,15 @@ int32_t RogueMP3::_getNumber(uint8_t base)
       || ((c >= 'a') && (c <= 'z'))
       || ((c >= '0') && (c <= '9')))
   {
-    if (c >= 'a') c -= 0x57;             // c = c - 'a' + 0x0a, c = c - ('a' - 0x0a)
-    else if (c >= 'A') c -= 0x37;        // c = c - 'A' + 0x0A
+    if (c >= 'a') c -= 0x57;            // c = c - 'a' + 0x0a, c = c - ('a' - 0x0a)
+    else if (c >= 'A') c -= 0x37;       // c = c - 'A' + 0x0A
     else c -= '0';
     if (c >= base) break;
 
     val *= base;
     val += c;
-    _commRead();                     // take the byte from the queue
-    while (!_commAvailable());        // wait for the next byte
+    _commRead();                        // take the byte from the queue
+    while (!_commAvailable());          // wait for the next byte
     c = _commPeek();
   }
   return neg ? -val : val;
