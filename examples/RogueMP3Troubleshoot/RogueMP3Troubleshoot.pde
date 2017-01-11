@@ -109,7 +109,7 @@ void setup()
       else
       {
         Serial.print("Error opening file: E");
-        Serial.println(fh, fileControl.LastErrorCode);
+        Serial.println(fh, fileControl.lastErrorCode);
       }
     }
   }

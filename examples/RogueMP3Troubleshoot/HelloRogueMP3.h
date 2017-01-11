@@ -2,7 +2,7 @@
 #if defined(WIRING)
 ByteTable HelloRogue32kbpsmp3 = ByteTable(
 #elif defined(ARDUINO)
-uint8_t HelloRogue32kbpsmp3[] PROGMEM =
+const uint8_t HelloRogue32kbpsmp3[] PROGMEM =
 {
 #endif
 0xff, 0xf3, 0x48, 0x64, 0x00, 0x06, 0x8c, 0x02,
