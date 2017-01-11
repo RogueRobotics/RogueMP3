@@ -569,7 +569,7 @@ int8_t RogueMP3::_getResponse(void)
   uint8_t r;
   uint8_t resp = 0;
 
-  // we will return 0 if all is good, error code otherwise
+  // we will return 1 if all is good, 0 otherwise
 
   r = _readBlocked();
 
